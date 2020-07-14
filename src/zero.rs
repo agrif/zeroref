@@ -12,13 +12,13 @@ impl<'d, S> Zero<'d, S> where S: Storage<'d> {
         }
     }
 
-    pub fn borrow(&self) -> ZeroRef<'_, S, S::Data> {
+    pub fn zero_ref(&self) -> ZeroRef<'_, S, S::Data> {
         ZeroRef::new(self)
     }
 }
 
 impl<'d, S> Zero<'d, S> where S: StorageMut<'d> {
-    pub fn borrow_mut(&mut self) -> ZeroRefMut<'_, S, S::Data> {
+    pub fn zero_ref_mut(&mut self) -> ZeroRefMut<'_, S, S::Data> {
         ZeroRefMut::new(self)
     }
 }

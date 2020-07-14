@@ -12,19 +12,19 @@ fn zero_sized() {
     {
         let z = REF.claim(& a).unwrap();
         assert_eq!(core::mem::size_of_val(&z), 0);
-        assert_eq!(core::mem::size_of_val(&z.borrow()), 0);
+        assert_eq!(core::mem::size_of_val(&z.zero_ref()), 0);
     }
     {
         let mut z = MUTREF.claim(&mut a).unwrap();
         assert_eq!(core::mem::size_of_val(&z), 0);
-        assert_eq!(core::mem::size_of_val(&z.borrow()), 0);
-        assert_eq!(core::mem::size_of_val(&z.borrow_mut()), 0);
+        assert_eq!(core::mem::size_of_val(&z.zero_ref()), 0);
+        assert_eq!(core::mem::size_of_val(&z.zero_ref_mut()), 0);
     }
     {
         let mut z = BOX.claim(a).unwrap();
         assert_eq!(core::mem::size_of_val(&z), 0);
-        assert_eq!(core::mem::size_of_val(&z.borrow()), 0);
-        assert_eq!(core::mem::size_of_val(&z.borrow_mut()), 0);
+        assert_eq!(core::mem::size_of_val(&z.zero_ref()), 0);
+        assert_eq!(core::mem::size_of_val(&z.zero_ref_mut()), 0);
     }
 }
 
@@ -33,7 +33,7 @@ fn stack_ref() {
     let a = 42;
     let z = REF.claim(&a).unwrap();
     assert_eq!(*z, 42);
-    assert_eq!(*z.borrow(), 42);
+    assert_eq!(*z.zero_ref(), 42);
 }
 
 #[test]
@@ -42,15 +42,15 @@ fn stack_mut_ref() {
     {
         let mut z = MUTREF.claim(&mut a).unwrap();
         assert_eq!(*z, 42);
-        assert_eq!(*z.borrow(), 42);
+        assert_eq!(*z.zero_ref(), 42);
         *z += 2;
         assert_eq!(*z, 44);
-        assert_eq!(*z.borrow(), 44);
-        let mut zmut = z.borrow_mut();
+        assert_eq!(*z.zero_ref(), 44);
+        let mut zmut = z.zero_ref_mut();
         *zmut += 2;
         assert_eq!(*zmut, 46);
         assert_eq!(*z, 46);
-        assert_eq!(*z.borrow(), 46);
+        assert_eq!(*z.zero_ref(), 46);
     }
     assert_eq!(a, 46);
 }
@@ -59,15 +59,15 @@ fn stack_mut_ref() {
 fn boxed() {
     let mut z = BOX.claim(42).unwrap();
     assert_eq!(*z, 42);
-    assert_eq!(*z.borrow(), 42);
+    assert_eq!(*z.zero_ref(), 42);
     *z += 2;
     assert_eq!(*z, 44);
-    assert_eq!(*z.borrow(), 44);
-    let mut zmut = z.borrow_mut();
+    assert_eq!(*z.zero_ref(), 44);
+    let mut zmut = z.zero_ref_mut();
     *zmut += 2;
     assert_eq!(*zmut, 46);
     assert_eq!(*z, 46);
-    assert_eq!(*z.borrow(), 46);
+    assert_eq!(*z.zero_ref(), 46);
     let a = z.get();
     assert_eq!(a, 46);
 }
