@@ -1,5 +1,6 @@
 use crate::{Zero, Storage};
 
+#[derive(Clone, Copy)]
 pub struct ZeroRef<'a, S, D> {
     _mark: core::marker::PhantomData<(fn(S) -> S, &'a D)>,
 }
