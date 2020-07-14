@@ -3,20 +3,20 @@
 macro_rules! __zeroref_internal {
     (@REF, $(#[$attr:meta])* ($($vis:tt)*) $N:ident $T:ty; $($t:tt)*) => {
         __zeroref_internal!(@TYPE, $(#[$attr])* ($($vis)*) $N);
-        __zeroref_internal!(@BACKING, $N, &'static $T);
+        __zeroref_internal!(@BACKING, $N, &'d $T, &'static $T);
         __zeroref_internal!(@STORAGE, $N, &'d $T, $T, @REF);
         zeroref!($($t)*);
     };
     (@REFMUT, $(#[$attr:meta])* ($($vis:tt)*) $N:ident $T:ty; $($t:tt)*) => {
         __zeroref_internal!(@TYPE, $(#[$attr])* ($($vis)*) $N);
-        __zeroref_internal!(@BACKING, $N, &'static mut $T);
+        __zeroref_internal!(@BACKING, $N, &'d mut $T, &'static mut $T);
         __zeroref_internal!(@STORAGE, $N, &'d mut $T, $T, @REF);
         __zeroref_internal!(@STORAGEMUT, $N, @REF);
         zeroref!($($t)*);
     };
     (@BOX, $(#[$attr:meta])* ($($vis:tt)*) $N:ident $T:ty; $($t:tt)*) => {
         __zeroref_internal!(@TYPE, $(#[$attr])* ($($vis)*) $N);
-        __zeroref_internal!(@BACKING, $N, $T);
+        __zeroref_internal!(@BACKING, $N, $T, $T);
         __zeroref_internal!(@STORAGE, $N, $T, $T, @BOX);
         __zeroref_internal!(@STORAGEMUT, $N, @BOX);
         __zeroref_internal!(@STORAGEOWNED, $N);
@@ -31,17 +31,23 @@ macro_rules! __zeroref_internal {
         #[doc(hidden)]
         $($vis)* static $N: $N = $N { __private_field: () };
     };
-    (@BACKING, $N:ident, $C:ty) => {
+    (@BACKING, $N:ident, $C:ty, $CErased:ty) => {
         impl $N {
             unsafe fn __backing() ->
-                (&'static mut ::core::option::Option<$C>,
+                (&'static mut ::core::option::Option<$CErased>,
                  &'static mut ::core::sync::atomic::AtomicBool)
             {
-                static mut DATA: ::core::option::Option<$C> =
+                static mut DATA: ::core::option::Option<$CErased> =
                     ::core::option::Option::None;
                 static mut LOCK: ::core::sync::atomic::AtomicBool
                     = ::core::sync::atomic::AtomicBool::new(false);
                 (&mut DATA, &mut LOCK)
+            }
+
+            pub fn claim<'d>(&self, value: $C)
+                     -> ::core::option::Option<$crate::Zero<'d, Self>>
+            {
+                <Self as $crate::Storage>::claim(self, value)
             }
         }
     };

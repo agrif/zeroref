@@ -1,4 +1,4 @@
-use crate::{zeroref, Storage};
+use crate::zeroref;
 
 zeroref! {
     static storage REF: &u32;
