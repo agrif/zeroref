@@ -29,24 +29,14 @@ impl<'d, S> Zero<'d, S> where S: StorageOwned<'d> {
     }
 }
 
-// we have no address, we are always unpin
-impl<'d, S> core::marker::Unpin for Zero<'d, S> where S: Storage<'d> {}
-
 impl<'d, S> Drop for Zero<'d, S> where S: Storage<'d> {
     fn drop(&mut self) {
         unsafe { S::unclaim() }
     }
 }
 
-impl<'d, S> core::ops::Deref for Zero<'d, S> where S: Storage<'d> {
-    type Target = S::Data;
-    fn deref(&self) -> &Self::Target {
-        unsafe { S::get_ref().unwrap() }
-    }
-}
+// we have no address, we are always unpin
+impl<'d, S> core::marker::Unpin for Zero<'d, S> where S: Storage<'d> {}
 
-impl<'d, S> core::ops::DerefMut for Zero<'d, S> where S: StorageMut<'d> {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        unsafe { S::get_mut().unwrap() }
-    }
-}
+zero_ref_impls!(Zero<'a, S>);
+zero_ref_mut_impls!(Zero<'a, S>);

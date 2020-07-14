@@ -13,21 +13,20 @@ impl<'a, 'd, S> ZeroRefMut<'a, S, S::Data> where S: Storage<'d>, 'd: 'a {
 // we have no address, we are always unpin
 impl<'a, S, D> core::marker::Unpin for ZeroRefMut<'a, S, D> {}
 
-impl<'a, S> core::ops::Deref for ZeroRefMut<'a, S, S::Data>
-where
-    S: Storage<'a>,
-{
-    type Target = S::Data;
-    fn deref(&self) -> &Self::Target {
-        unsafe { S::get_ref().unwrap() }
-    }
+macro_rules! zero_ref_mut_impls {
+    ($Ref:ty) => {
+        impl<'a, S> core::ops::DerefMut for $Ref
+        where
+            S: StorageMut<'a>,
+        {
+            fn deref_mut(&mut self) -> &mut Self::Target {
+                unsafe { S::get_mut().unwrap() }
+            }
+        }
+
+        // FIXME Borrow?
+    };
 }
 
-impl<'a, S> core::ops::DerefMut for ZeroRefMut<'a, S, S::Data>
-where
-    S: StorageMut<'a>,
-{
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        unsafe { S::get_mut().unwrap() }
-    }
-}
+zero_ref_impls!(ZeroRefMut<'a, S, S::Data>);
+zero_ref_mut_impls!(ZeroRefMut<'a, S, S::Data>);
