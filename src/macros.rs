@@ -82,3 +82,45 @@ macro_rules! zeroref {
 
     () => ()
 }
+
+#[cfg(test)]
+mod test {
+    mod mod1 {
+        pub mod mod2 {
+            crate::zeroref! {
+                static storage REF: &u32;
+                pub static storage PREF: &u32;
+                pub (super) static storage PSREF: &u32;
+
+                static storage REFMUT: &mut u32;
+                pub static storage PREFMUT: &mut u32;
+                pub (super) static storage PSREFMUT: &mut u32;
+
+                static storage OWNED: u32;
+                pub static storage POWNED: u32;
+                pub (super) static storage PSOWNED: u32;
+            }
+
+            #[test]
+            fn private() {
+                let _x = &REF;
+                let _x = &REFMUT;
+                let _x = &OWNED;
+            }
+        }
+
+        #[test]
+        fn qualified() {
+            let _x = &mod2::PSREF;
+            let _x = &mod2::PSREFMUT;
+            let _x = &mod2::PSOWNED;
+        }
+    }
+
+    #[test]
+    fn public() {
+        let _x = &mod1::mod2::PREF;
+        let _x = &mod1::mod2::PREFMUT;
+        let _x = &mod1::mod2::POWNED;
+    }
+}

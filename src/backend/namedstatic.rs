@@ -73,3 +73,27 @@ macro_rules! named_static {
     };
     () => ()
 }
+
+#[cfg(test)]
+mod test {
+    use super::{NamedStatic, NamedStaticMut};
+
+    crate::named_static! {
+        static RAWREF: u32 = 50;
+        static mut RAWMUT: u32 = 10;
+    }
+
+    #[test]
+    fn rawref() {
+        assert_eq!(RAWREF::get_ref(), &50);
+    }
+
+    #[test]
+    fn rawmut() {
+        assert_eq!(RAWMUT::get_ref(), &10);
+        unsafe {
+            *RAWMUT::get_mut() = 12;
+        }
+        assert_eq!(RAWMUT::get_ref(), &12);
+    }
+}

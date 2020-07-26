@@ -44,3 +44,36 @@ where
         S::get_mut().1.as_mut().unwrap()
     }
 }
+
+#[cfg(test)]
+mod test {
+    crate::zeroref! {
+        static storage OWNED: u32;
+    }
+
+    #[test]
+    fn zero_sized() {
+        let a = 42;
+        let mut z = OWNED.claim(a);
+        assert_eq!(core::mem::size_of_val(&z), 0);
+        assert_eq!(core::mem::size_of_val(&z.zero_ref()), 0);
+        assert_eq!(core::mem::size_of_val(&z.zero_ref_mut()), 0);
+    }
+
+    #[test]
+    fn owned() {
+        let mut z = OWNED.claim(42);
+        assert_eq!(*z, 42);
+        assert_eq!(*z.zero_ref(), 42);
+        *z += 2;
+        assert_eq!(*z, 44);
+        assert_eq!(*z.zero_ref(), 44);
+        let mut zmut = z.zero_ref_mut();
+        *zmut += 2;
+        assert_eq!(*zmut, 46);
+        assert_eq!(*z, 46);
+        assert_eq!(*z.zero_ref(), 46);
+        let a = z.get();
+        assert_eq!(a, 46);
+    }
+}

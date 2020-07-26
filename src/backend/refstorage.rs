@@ -33,3 +33,26 @@ where
         S::get_ref().1.unwrap().as_ref().unwrap()
     }
 }
+
+#[cfg(test)]
+mod test {
+    crate::zeroref! {
+        static storage REF: &u32;
+    }
+
+    #[test]
+    fn zero_sized() {
+        let a = 42;
+        let z = REF.claim(&a);
+        assert_eq!(core::mem::size_of_val(&z), 0);
+        assert_eq!(core::mem::size_of_val(&z.zero_ref()), 0);
+    }
+
+    #[test]
+    fn stack_ref() {
+        let a = 42;
+        let z = REF.claim(&a);
+        assert_eq!(*z, 42);
+        assert_eq!(*z.zero_ref(), 42);
+    }
+}

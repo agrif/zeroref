@@ -14,6 +14,3 @@ pub use zerorefmut::ZeroRefMut;
 
 mod zeroguard;
 pub use zeroguard::ZeroGuard;
-
-#[cfg(test)]
-mod tests;

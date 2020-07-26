@@ -44,3 +44,38 @@ where
         S::get_mut().1.unwrap().as_mut().unwrap()
     }
 }
+
+#[cfg(test)]
+mod test {
+    crate::zeroref! {
+        static storage REFMUT: &mut u32;
+    }
+
+    #[test]
+    fn zero_sized() {
+        let mut a = 42;
+        let mut z = REFMUT.claim(&mut a);
+        assert_eq!(core::mem::size_of_val(&z), 0);
+        assert_eq!(core::mem::size_of_val(&z.zero_ref()), 0);
+        assert_eq!(core::mem::size_of_val(&z.zero_ref_mut()), 0);
+    }
+
+    #[test]
+    fn stack_mut_ref() {
+        let mut a = 42;
+        {
+            let mut z = REFMUT.claim(&mut a);
+            assert_eq!(*z, 42);
+            assert_eq!(*z.zero_ref(), 42);
+            *z += 2;
+            assert_eq!(*z, 44);
+            assert_eq!(*z.zero_ref(), 44);
+            let mut zmut = z.zero_ref_mut();
+            *zmut += 2;
+            assert_eq!(*zmut, 46);
+            assert_eq!(*z, 46);
+            assert_eq!(*z.zero_ref(), 46);
+        }
+        assert_eq!(a, 46);
+    }
+}
