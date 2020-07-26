@@ -2,11 +2,7 @@
 
 mod macros;
 
-mod staticref;
-pub use staticref::{StaticRef, StaticRefMut};
-
-mod storage;
-pub use storage::{Storage, StorageMut, Ref, MutRef, Owned};
+pub mod backend;
 
 #[macro_use]
 mod zeroref;
@@ -16,8 +12,8 @@ pub use crate::zeroref::ZeroRef;
 mod zerorefmut;
 pub use zerorefmut::ZeroRefMut;
 
-mod zero;
-pub use zero::Zero;
+mod zeroguard;
+pub use zeroguard::ZeroGuard;
 
 #[cfg(test)]
 mod tests;

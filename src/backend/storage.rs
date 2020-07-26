@@ -1,4 +1,7 @@
-use crate::{StaticRefMut, Zero};
+use crate::backend::NamedStaticMut;
+use crate::ZeroGuard;
+
+use lock_api::RawMutex;
 
 pub unsafe trait Storage<'d>: Sized {
     type Claim: 'd;
@@ -10,15 +13,22 @@ pub unsafe trait Storage<'d>: Sized {
     unsafe fn unstore() -> Option<Self::Claim>;
     unsafe fn get_ref() -> &'d Self::Data;
 
-    fn claim(&self, value: Self::Claim) -> Option<Zero<'d, Self>> {
-        use lock_api::RawMutex;
+    fn try_claim(&self, value: Self::Claim) -> Option<ZeroGuard<'d, Self>> {
         if Self::get_mutex().try_lock() {
             unsafe {
                 Self::store(value);
-                Some(Zero::new())
+                Some(ZeroGuard::new())
             }
         } else {
             None
+        }
+    }
+
+    fn claim(&self, value: Self::Claim) -> ZeroGuard<'d, Self> {
+        Self::get_mutex().lock();
+        unsafe {
+            Self::store(value);
+            ZeroGuard::new()
         }
     }
 }
@@ -37,14 +47,17 @@ impl<S, T> Ref<S, T> {
 }
 
 impl<'d, S, T> Ref<S, T> where Self: Storage<'d, Claim=&'d T>, T: 'd {
-    pub fn claim(&self, value: &'d T) -> Option<Zero<'d, Self>> {
+    pub fn try_claim(&self, value: &'d T) -> Option<ZeroGuard<'d, Self>> {
+        Storage::try_claim(self, value)
+    }
+    pub fn claim(&self, value: &'d T) -> ZeroGuard<'d, Self> {
         Storage::claim(self, value)
     }
 }
 
 unsafe impl<'d, S, M, T> Storage<'d> for Ref<S, T>
 where
-    S: StaticRefMut<Data=(M, Option<*const T>)>,
+    S: NamedStaticMut<Data=(M, Option<*const T>)>,
     T: 'd,
     M: lock_api::RawMutex + 'd,
 {
@@ -79,14 +92,17 @@ where
     Self: Storage<'d, Claim=&'d mut T>,
     T: 'd,
 {
-    pub fn claim(&self, value: &'d mut T) -> Option<Zero<'d, Self>> {
+    pub fn try_claim(&self, value: &'d mut T) -> Option<ZeroGuard<'d, Self>> {
+        Storage::try_claim(self, value)
+    }
+    pub fn claim(&self, value: &'d mut T) -> ZeroGuard<'d, Self> {
         Storage::claim(self, value)
     }
 }
 
 unsafe impl<'d, S, M, T> Storage<'d> for MutRef<S, T>
 where
-    S: StaticRefMut<Data=(M, Option<*mut T>)>,
+    S: NamedStaticMut<Data=(M, Option<*mut T>)>,
     T: 'd,
     M: lock_api::RawMutex + 'd,
 {
@@ -109,7 +125,7 @@ where
 
 unsafe impl<'d, S, M, T> StorageMut<'d> for MutRef<S, T>
 where
-    S: StaticRefMut<Data=(M, Option<*mut T>)>,
+    S: NamedStaticMut<Data=(M, Option<*mut T>)>,
     T: 'd,
     M: lock_api::RawMutex + 'd,
 {
@@ -128,14 +144,17 @@ impl<S, T> Owned<S, T> {
 }
 
 impl<'d, S, T> Owned<S, T> where Self: Storage<'d, Claim=T>, T: 'd {
-    pub fn claim(&self, value: T) -> Option<Zero<'d, Self>> {
+    pub fn try_claim(&self, value: T) -> Option<ZeroGuard<'d, Self>> {
+        Storage::try_claim(self, value)
+    }
+    pub fn claim(&self, value: T) -> ZeroGuard<'d, Self> {
         Storage::claim(self, value)
     }
 }
 
 unsafe impl<'d, S, M, T> Storage<'d> for Owned<S, T>
 where
-    S: StaticRefMut<Data=(M, Option<T>)>,
+    S: NamedStaticMut<Data=(M, Option<T>)>,
     T: 'd,
     M: lock_api::RawMutex + 'd,
 {
@@ -158,7 +177,7 @@ where
 
 unsafe impl<'d, S, M, T> StorageMut<'d> for Owned<S, T>
 where
-    S: StaticRefMut<Data=(M, Option<T>)>,
+    S: NamedStaticMut<Data=(M, Option<T>)>,
     T: 'd,
     M: lock_api::RawMutex + 'd,
 {

@@ -1,11 +1,12 @@
-use crate::{Zero, Storage, StorageMut};
+use crate::backend::{Storage, StorageMut};
+use crate::ZeroGuard;
 
 pub struct ZeroRefMut<'a, S, D> {
     _mark: core::marker::PhantomData<(fn(S) -> S, &'a mut D)>,
 }
 
 impl<'a, 'd, S> ZeroRefMut<'a, S, S::Data> where S: Storage<'d>, 'd: 'a {
-    pub(crate) fn new(_zero: &'a mut Zero<'d, S>) -> Self {
+    pub(crate) fn new(_zero: &'a mut ZeroGuard<'d, S>) -> Self {
         ZeroRefMut { _mark: core::marker::PhantomData }
     }
 }

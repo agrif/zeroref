@@ -2,34 +2,37 @@
 #[doc(hidden)]
 macro_rules! __zeroref_internal {
     (@REF, $(#[$attr:meta])* ($($vis:tt)*) $N:ident $T:ty) => {
-        $crate::static_ref! {
+        $crate::named_static! {
             #[doc(hidden)]
             $($vis)* static mut $N:
             (::spinning_top::RawSpinlock, Option<*const $T>)
                 = (::lock_api::RawMutex::INIT, None);
         }
         $(#[$attr])*
-        $($vis)* static $N: $crate::Ref<$N, $T> = $crate::Ref::new();
+        $($vis)* static $N: $crate::backend::Ref<$N, $T>
+            = $crate::backend::Ref::new();
     };
     (@REFMUT, $(#[$attr:meta])* ($($vis:tt)*) $N:ident $T:ty) => {
-        $crate::static_ref! {
+        $crate::named_static! {
             #[doc(hidden)]
             $($vis)* static mut $N:
             (::spinning_top::RawSpinlock, Option<*mut $T>)
                 = (::lock_api::RawMutex::INIT, None);
         }
         $(#[$attr])*
-        $($vis)* static $N: $crate::MutRef<$N, $T> = $crate::MutRef::new();
+        $($vis)* static $N: $crate::backend::MutRef<$N, $T>
+            = $crate::backend::MutRef::new();
     };
     (@BOX, $(#[$attr:meta])* ($($vis:tt)*) $N:ident $T:ty) => {
-        $crate::static_ref! {
+        $crate::named_static! {
             #[doc(hidden)]
             $($vis)* static mut $N:
             (::spinning_top::RawSpinlock, Option<$T>)
                 = (::lock_api::RawMutex::INIT, None);
         }
         $(#[$attr])*
-        $($vis)* static $N: $crate::Owned<$N, $T> = $crate::Owned::new();
+        $($vis)* static $N: $crate::backend::Owned<$N, $T>
+            = $crate::backend::Owned::new();
     };
 }
 

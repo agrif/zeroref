@@ -1,4 +1,5 @@
-use crate::{Zero, Storage};
+use crate::backend::Storage;
+use crate::ZeroGuard;
 
 #[derive(Clone, Copy)]
 pub struct ZeroRef<'a, S, D> {
@@ -6,7 +7,7 @@ pub struct ZeroRef<'a, S, D> {
 }
 
 impl<'a, 'd, S> ZeroRef<'a, S, S::Data> where S: Storage<'d>, 'd: 'a {
-    pub(crate) fn new(_zero: &'a Zero<'d, S>) -> Self {
+    pub(crate) fn new(_zero: &'a ZeroGuard<'d, S>) -> Self {
         ZeroRef { _mark: core::marker::PhantomData }
     }
 }
@@ -51,7 +52,7 @@ macro_rules! zero_ref_impls {
 
         zero_ref_impls!(@CMP, $Ref, $crate::ZeroRef<'b, T, T::Data>);
         zero_ref_impls!(@CMP, $Ref, $crate::ZeroRefMut<'b, T, T::Data>);
-        zero_ref_impls!(@CMP, $Ref, $crate::Zero<'b, T>);
+        zero_ref_impls!(@CMP, $Ref, $crate::ZeroGuard<'b, T>);
 
         impl<'a, S> core::cmp::Ord for $Ref
         where
