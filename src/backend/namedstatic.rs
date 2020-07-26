@@ -10,15 +10,29 @@ pub trait NamedStaticMut: NamedStatic {
 #[macro_export(local_inner_macros)]
 #[doc(hidden)]
 macro_rules! __named_static_internal {
-    (@TYPE, $(#[$attr:meta])* ($($vis:tt)*) $N:ident : $T:ty = $v:expr) => {
+    (@COMMON, $(#[$attr:meta])* ($($vis:tt)*) $N:ident : $T:ty = $v:expr) => {
         #[allow(missing_copy_implementations)]
         #[allow(non_camel_case_types)]
         #[allow(dead_code)]
         $(#[$attr])*
-        $($vis)* struct $N {}
+        $($vis)* struct $N {
+            _mark: ::core::marker::PhantomData<()>,
+        }
+        #[allow(dead_code)]
+        impl $N {
+            pub const fn new() -> Self {
+                $N { _mark: ::core::marker::PhantomData }
+            }
+        }
+        impl ::core::ops::Deref for $N {
+            type Target = $T;
+            fn deref(&self) -> &Self::Target {
+                <Self as $crate::backend::NamedStatic>::get_ref()
+            }
+        }
     };
     (@REF, $(#[$attr:meta])* ($($vis:tt)*) $N:ident : $T:ty = $v:expr) => {
-        __named_static_internal!(@TYPE, $(#[$attr])* ($($vis)*) $N : $T = $v);
+        __named_static_internal!(@COMMON, $(#[$attr])* ($($vis)*) $N : $T = $v);
         impl $crate::backend::NamedStatic for $N {
             type Data = $T;
             fn get_ref<'a>() -> &'a Self::Data {
@@ -28,7 +42,7 @@ macro_rules! __named_static_internal {
         }
     };
     (@MUT, $(#[$attr:meta])* ($($vis:tt)*) $N:ident : $T:ty = $v:expr) => {
-        __named_static_internal!(@TYPE, $(#[$attr])* ($($vis)*) $N : $T = $v);
+        __named_static_internal!(@COMMON, $(#[$attr])* ($($vis)*) $N : $T = $v);
         impl $crate::backend::NamedStatic for $N {
             type Data = $T;
             fn get_ref<'a>() -> &'a Self::Data {
@@ -79,21 +93,32 @@ mod test {
     use super::{NamedStatic, NamedStaticMut};
 
     crate::named_static! {
-        static RAWREF: u32 = 50;
-        static mut RAWMUT: u32 = 10;
+        static REF: u32 = 50;
+        static mut MUT: u32 = 10;
     }
 
     #[test]
-    fn rawref() {
-        assert_eq!(RAWREF::get_ref(), &50);
+    fn zero_sized() {
+        assert_eq!(core::mem::size_of::<REF>(), 0);
+        assert_eq!(core::mem::size_of::<MUT>(), 0);
     }
 
     #[test]
-    fn rawmut() {
-        assert_eq!(RAWMUT::get_ref(), &10);
+    fn staticref() {
+        assert_eq!(REF::get_ref(), &50);
+    }
+
+    #[test]
+    fn staticderef() {
+        assert_eq!(*REF::new(), 50);
+    }
+
+    #[test]
+    fn staticmut() {
+        assert_eq!(MUT::get_ref(), &10);
         unsafe {
-            *RAWMUT::get_mut() = 12;
+            *MUT::get_mut() = 12;
         }
-        assert_eq!(RAWMUT::get_ref(), &12);
+        assert_eq!(MUT::get_ref(), &12);
     }
 }
