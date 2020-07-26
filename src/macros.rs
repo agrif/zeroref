@@ -9,8 +9,8 @@ macro_rules! __zeroref_internal {
                 = (::lock_api::RawMutex::INIT, None);
         }
         $(#[$attr])*
-        $($vis)* static $N: $crate::backend::Ref<$N, $T>
-            = $crate::backend::Ref::new();
+        $($vis)* static $N: $crate::backend::RefStorage<$N, $T>
+            = $crate::backend::RefStorage::new();
     };
     (@REFMUT, $(#[$attr:meta])* ($($vis:tt)*) $N:ident $T:ty) => {
         $crate::named_static! {
@@ -20,8 +20,8 @@ macro_rules! __zeroref_internal {
                 = (::lock_api::RawMutex::INIT, None);
         }
         $(#[$attr])*
-        $($vis)* static $N: $crate::backend::MutRef<$N, $T>
-            = $crate::backend::MutRef::new();
+        $($vis)* static $N: $crate::backend::RefMutStorage<$N, $T>
+            = $crate::backend::RefMutStorage::new();
     };
     (@BOX, $(#[$attr:meta])* ($($vis:tt)*) $N:ident $T:ty) => {
         $crate::named_static! {
@@ -31,8 +31,8 @@ macro_rules! __zeroref_internal {
                 = (::lock_api::RawMutex::INIT, None);
         }
         $(#[$attr])*
-        $($vis)* static $N: $crate::backend::Owned<$N, $T>
-            = $crate::backend::Owned::new();
+        $($vis)* static $N: $crate::backend::OwnedStorage<$N, $T>
+            = $crate::backend::OwnedStorage::new();
     };
 }
 
