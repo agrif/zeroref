@@ -1,4 +1,26 @@
+use crate::static_ref;
 use crate::zeroref;
+
+static_ref! {
+    static RAWREF: u32 = 50;
+    static mut RAWMUT: u32 = 10;
+}
+
+#[test]
+fn rawref() {
+    use crate::StaticRef;
+    assert_eq!(RAWREF::get_ref(), &50);
+}
+
+#[test]
+fn rawmut() {
+    use crate::{StaticRef, StaticRefMut};
+    assert_eq!(RAWMUT::get_ref(), &10);
+    unsafe {
+        *RAWMUT::get_mut() = 12;
+    }
+    assert_eq!(RAWMUT::get_ref(), &12);
+}
 
 zeroref! {
     static storage REF: &u32;
@@ -10,7 +32,7 @@ zeroref! {
 fn zero_sized() {
     let mut a = 42;
     {
-        let z = REF.claim(& a).unwrap();
+        let z = REF.claim(&a).unwrap();
         assert_eq!(core::mem::size_of_val(&z), 0);
         assert_eq!(core::mem::size_of_val(&z.zero_ref()), 0);
     }

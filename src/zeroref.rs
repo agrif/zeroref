@@ -22,7 +22,7 @@ macro_rules! zero_ref_impls {
         {
             type Target = S::Data;
             fn deref(&self) -> &Self::Target {
-                unsafe { S::get_ref().unwrap() }
+                unsafe { S::get_ref() }
             }
         }
 

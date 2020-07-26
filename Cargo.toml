@@ -5,3 +5,5 @@ authors = ["Aaron Griffith <aargri@gmail.com>"]
 edition = "2018"
 
 [dependencies]
+lock_api = "0.4"
+spinning_top = "0.2"

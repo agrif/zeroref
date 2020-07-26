@@ -20,7 +20,7 @@ macro_rules! zero_ref_mut_impls {
             S: StorageMut<'a>,
         {
             fn deref_mut(&mut self) -> &mut Self::Target {
-                unsafe { S::get_mut().unwrap() }
+                unsafe { S::get_mut() }
             }
         }
 

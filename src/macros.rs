@@ -1,155 +1,80 @@
 #[macro_export(local_inner_macros)]
 #[doc(hidden)]
 macro_rules! __zeroref_internal {
-    (@REF, $(#[$attr:meta])* ($($vis:tt)*) $N:ident $T:ty; $($t:tt)*) => {
-        __zeroref_internal!(@TYPE, $(#[$attr])* ($($vis)*) $N);
-        __zeroref_internal!(@BACKING, $N, &'d $T, &'static $T);
-        __zeroref_internal!(@STORAGE, $N, &'d $T, $T, @REF);
-        zeroref!($($t)*);
-    };
-    (@REFMUT, $(#[$attr:meta])* ($($vis:tt)*) $N:ident $T:ty; $($t:tt)*) => {
-        __zeroref_internal!(@TYPE, $(#[$attr])* ($($vis)*) $N);
-        __zeroref_internal!(@BACKING, $N, &'d mut $T, &'static mut $T);
-        __zeroref_internal!(@STORAGE, $N, &'d mut $T, $T, @REF);
-        __zeroref_internal!(@STORAGEMUT, $N, @REF);
-        zeroref!($($t)*);
-    };
-    (@BOX, $(#[$attr:meta])* ($($vis:tt)*) $N:ident $T:ty; $($t:tt)*) => {
-        __zeroref_internal!(@TYPE, $(#[$attr])* ($($vis)*) $N);
-        __zeroref_internal!(@BACKING, $N, $T, $T);
-        __zeroref_internal!(@STORAGE, $N, $T, $T, @BOX);
-        __zeroref_internal!(@STORAGEMUT, $N, @BOX);
-        __zeroref_internal!(@STORAGEOWNED, $N);
-        zeroref!($($t)*);
-    };
-    (@TYPE, $(#[$attr:meta])* ($($vis:tt)*) $N:ident) => {
-        #[allow(missing_copy_implementations)]
-        #[allow(non_camel_case_types)]
-        #[allow(dead_code)]
+    (@REF, $(#[$attr:meta])* ($($vis:tt)*) $N:ident $T:ty) => {
+        $crate::static_ref! {
+            #[doc(hidden)]
+            $($vis)* static mut $N:
+            (::spinning_top::RawSpinlock, Option<*const $T>)
+                = (::lock_api::RawMutex::INIT, None);
+        }
         $(#[$attr])*
-        $($vis)* struct $N { __private_field: () }
-        #[doc(hidden)]
-        $($vis)* static $N: $N = $N { __private_field: () };
+        $($vis)* static $N: $crate::Ref<$N, $T> = $crate::Ref::new();
     };
-    (@BACKING, $N:ident, $C:ty, $CErased:ty) => {
-        impl $N {
-            unsafe fn __backing() ->
-                (&'static mut ::core::option::Option<$CErased>,
-                 &'static mut ::core::sync::atomic::AtomicBool)
-            {
-                static mut DATA: ::core::option::Option<$CErased> =
-                    ::core::option::Option::None;
-                static mut LOCK: ::core::sync::atomic::AtomicBool
-                    = ::core::sync::atomic::AtomicBool::new(false);
-                (&mut DATA, &mut LOCK)
-            }
-
-            pub fn claim<'d>(&self, value: $C)
-                     -> ::core::option::Option<$crate::Zero<'d, Self>>
-            {
-                <Self as $crate::Storage>::claim(self, value)
-            }
+    (@REFMUT, $(#[$attr:meta])* ($($vis:tt)*) $N:ident $T:ty) => {
+        $crate::static_ref! {
+            #[doc(hidden)]
+            $($vis)* static mut $N:
+            (::spinning_top::RawSpinlock, Option<*mut $T>)
+                = (::lock_api::RawMutex::INIT, None);
         }
+        $(#[$attr])*
+        $($vis)* static $N: $crate::MutRef<$N, $T> = $crate::MutRef::new();
     };
-    (@STORAGE, $N:ident, $C:ty, $D:ty, @$get_ref:tt) => {
-        unsafe impl<'d> $crate::Storage<'d> for $N {
-            type Claim = $C;
-            type Data = $D;
-            unsafe fn claim_and_store(value: Self::Claim)
-                                      -> ::core::option::Option<()> {
-                use ::core::sync::atomic::Ordering;
-                use ::core::option::Option::*;
-                let (data, lock) = Self::__backing();
-                if lock.swap(true, Ordering::SeqCst) == false {
-                    // was unclaimed before, but we claimed it
-                    *data = Some(::core::mem::transmute(value));
-                    // make sure that write is done
-                    ::core::sync::atomic::compiler_fence(Ordering::SeqCst);
-                    Some(())
-                } else {
-                    None
-                }
-            }
-            unsafe fn unclaim() {
-                use ::core::sync::atomic::Ordering;
-                let (data, lock) = Self::__backing();
-                if lock.swap(false, Ordering::SeqCst) == true {
-                    // we were locked, now we're not
-                    *data = ::core::option::Option::None;
-                    // make sure that write is done
-                    ::core::sync::atomic::compiler_fence(Ordering::SeqCst);
-                }
-            }
-            unsafe fn get_ref() -> ::core::option::Option<&'d Self::Data> {
-                let (data, _lock) = Self::__backing();
-                __zeroref_internal!(@STORAGE_GET_REF, data, $D, @$get_ref)
-            }
+    (@BOX, $(#[$attr:meta])* ($($vis:tt)*) $N:ident $T:ty) => {
+        $crate::static_ref! {
+            #[doc(hidden)]
+            $($vis)* static mut $N:
+            (::spinning_top::RawSpinlock, Option<$T>)
+                = (::lock_api::RawMutex::INIT, None);
         }
+        $(#[$attr])*
+        $($vis)* static $N: $crate::Owned<$N, $T> = $crate::Owned::new();
     };
-    (@STORAGE_GET_REF, $data:expr, $D:ty, @REF) => {
-        $data.as_ref().map(|v| ::core::ptr::read(v) as & $D)
-    };
-    (@STORAGE_GET_REF, $data:expr, $D:ty, @BOX) => {
-        $data.as_ref()
-    };
-    (@STORAGEMUT, $N:ident, @$get_mut:tt) => {
-        unsafe impl<'d> $crate::StorageMut<'d> for $N {
-            unsafe fn get_mut() -> ::core::option::Option<&'d mut Self::Data> {
-                let (data, _lock) = Self::__backing();
-                __zeroref_internal!(@STORAGE_GET_MUT, data, @$get_mut)
-            }
-        }
-    };
-    (@STORAGE_GET_MUT, $data:expr, @REF) => {
-        $data.as_ref().map(|v| ::core::ptr::read(v))
-    };
-    (@STORAGE_GET_MUT, $data:expr, @BOX) => {
-        $data.as_mut()
-    };
-    (@STORAGEOWNED, $N:ident) => {
-        unsafe impl<'d> $crate::StorageOwned<'d> for $N {
-            unsafe fn unstore() -> ::core::option::Option<Self::Data> {
-                let (data, _lock) = Self::__backing();
-                data.take()
-            }
-        }
-    };
-    () => ()
 }
 
 #[macro_export(local_inner_macros)]
 macro_rules! zeroref {
     // ref storage
     ($(#[$attr:meta])* static storage $N:ident : & $T:ty; $($t:tt)*) => {
-        __zeroref_internal!(@REF, $(#[$attr])* () $N $T; $($t)*);
+        __zeroref_internal!(@REF, $(#[$attr])* () $N $T);
+        zeroref!{ $($t)* }
     };
     ($(#[$attr:meta])* pub static storage $N:ident : & $T:ty; $($t:tt)*) => {
-        __zeroref_internal!(@REF, $(#[$attr])* (pub) $N $T; $($t)*);
+        __zeroref_internal!(@REF, $(#[$attr])* (pub) $N $T);
+        zeroref!{ $($t)* }
     };
     ($(#[$attr:meta])* pub ($($vis:tt)+) static storage $N:ident : & $T:ty; $($t:tt)*) => {
-        __zeroref_internal!(@REF, $(#[$attr])* (pub ($($vis)+)) $N $T; $($t)*);
+        __zeroref_internal!(@REF, $(#[$attr])* (pub ($($vis)+)) $N $T);
+        zeroref!{ $($t)* }
     };
 
     // mut ref storage
     ($(#[$attr:meta])* static storage $N:ident : & mut $T:ty; $($t:tt)*) => {
-        __zeroref_internal!(@REFMUT, $(#[$attr])* () $N $T; $($t)*);
+        __zeroref_internal!(@REFMUT, $(#[$attr])* () $N $T);
+        zeroref!{ $($t)* }
     };
     ($(#[$attr:meta])* pub static storage $N:ident : & mut $T:ty; $($t:tt)*) => {
-        __zeroref_internal!(@REFMUT, $(#[$attr])* (pub) $N $T; $($t)*);
+        __zeroref_internal!(@REFMUT, $(#[$attr])* (pub) $N $T);
+        zeroref!{ $($t)* }
     };
     ($(#[$attr:meta])* pub ($($vis:tt)+) static storage $N:ident : & mut $T:ty; $($t:tt)*) => {
-        __zeroref_internal!(@REFMUT, $(#[$attr])* (pub ($($vis)+)) $N $T; $($t)*);
+        __zeroref_internal!(@REFMUT, $(#[$attr])* (pub ($($vis)+)) $N $T);
+        zeroref!{ $($t)* }
     };
 
     // box-like storage
     ($(#[$attr:meta])* static storage $N:ident : $T:ty; $($t:tt)*) => {
-        __zeroref_internal!(@BOX, $(#[$attr])* () $N $T; $($t)*);
+        __zeroref_internal!(@BOX, $(#[$attr])* () $N $T);
+        zeroref!{ $($t)* }
     };
     ($(#[$attr:meta])* pub static storage $N:ident : $T:ty; $($t:tt)*) => {
-        __zeroref_internal!(@BOX, $(#[$attr])* (pub) $N $T; $($t)*);
+        __zeroref_internal!(@BOX, $(#[$attr])* (pub) $N $T);
+        zeroref!{ $($t)* }
     };
     ($(#[$attr:meta])* pub ($($vis:tt)+) static storage $N:ident : $T:ty; $($t:tt)*) => {
-        __zeroref_internal!(@BOX, $(#[$attr])* (pub ($($vis)+)) $N $T; $($t)*);
+        __zeroref_internal!(@BOX, $(#[$attr])* (pub ($($vis)+)) $N $T);
+        zeroref!{ $($t)* }
     };
 
     () => ()

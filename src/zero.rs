@@ -1,19 +1,21 @@
-use crate::{Storage, StorageMut, StorageOwned, ZeroRef, ZeroRefMut};
+use crate::{Storage, StorageMut, ZeroRef, ZeroRefMut};
 
 pub struct Zero<'d, S> where S: Storage<'d> {
-    _mark: core::marker::PhantomData<S::Claim>,
+    _mark: core::marker::PhantomData<
+            lock_api::MutexGuard<'d, S::Mutex, S::Claim>>,
 }
 
 impl<'d, S> Zero<'d, S> where S: Storage<'d> {
-    pub(crate) fn new(value: S::Claim) -> Option<Self> {
-        unsafe {
-            S::claim_and_store(value)
-                .map(|_| Zero { _mark: core::marker::PhantomData })
-        }
+    pub(crate) unsafe fn new() -> Self {
+        Zero { _mark: core::marker::PhantomData }
     }
 
     pub fn zero_ref(&self) -> ZeroRef<'_, S, S::Data> {
         ZeroRef::new(self)
+    }
+
+    pub fn get(self) -> S::Claim {
+        unsafe { S::unstore().unwrap() }
     }
 }
 
@@ -23,15 +25,13 @@ impl<'d, S> Zero<'d, S> where S: StorageMut<'d> {
     }
 }
 
-impl<'d, S> Zero<'d, S> where S: StorageOwned<'d> {
-    pub fn get(self) -> S::Data {
-        unsafe { S::unstore().unwrap() }
-    }
-}
-
 impl<'d, S> Drop for Zero<'d, S> where S: Storage<'d> {
     fn drop(&mut self) {
-        unsafe { S::unclaim() }
+        use lock_api::RawMutex;
+        unsafe {
+            S::unstore();
+            S::get_mutex().unlock();
+        }
     }
 }
 

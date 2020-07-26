@@ -2,8 +2,11 @@
 
 mod macros;
 
+mod staticref;
+pub use staticref::{StaticRef, StaticRefMut};
+
 mod storage;
-pub use storage::{Storage, StorageMut, StorageOwned};
+pub use storage::{Storage, StorageMut, Ref, MutRef, Owned};
 
 #[macro_use]
 mod zeroref;
