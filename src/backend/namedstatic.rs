@@ -92,6 +92,38 @@ macro_rules! named_static {
 mod test {
     use super::{NamedStatic, NamedStaticMut};
 
+    mod mod1 {
+        pub mod mod2 {
+            crate::named_static! {
+                static REF: u32 = 0;
+                pub static PREF: u32 = 0;
+                pub (super) static PSREF: u32 = 0;
+
+                static mut MUT: u32 = 0;
+                pub static mut PMUT: u32 = 0;
+                pub (super) static mut PSMUT: u32 = 0;
+            }
+
+            #[test]
+            fn private() {
+                let _x = REF::new();
+                let _x = MUT::new();
+            }
+        }
+
+        #[test]
+        fn qualified() {
+            let _x = mod2::PSREF::new();
+            let _x = mod2::PSMUT::new();
+        }
+    }
+
+    #[test]
+    fn public() {
+        let _x = mod1::mod2::PREF::new();
+        let _y = mod1::mod2::PMUT::new();
+    }
+
     crate::named_static! {
         static REF: u32 = 50;
         static mut MUT: u32 = 10;
